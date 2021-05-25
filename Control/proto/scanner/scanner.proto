@@ -1,0 +1,17 @@
+syntax = "proto3";
+package scanner;//namespace
+
+option go_package = "google.golang.org/grpc/Control/proto/scanner";
+
+message ResourceRegister {
+    int64 port = 1;
+    string ServiceType = 2;
+}
+
+message ResourceRegisterResult {
+    bool Result = 1;
+}
+
+service ResourceRegisterService {
+    rpc register(ResourceRegister) returns (ResourceRegisterResult) {};
+}
