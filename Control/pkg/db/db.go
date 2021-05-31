@@ -4,17 +4,19 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
 	userName = "root"
-	password = ""
+	password = "scanner"
 	host     = "127.0.0.1"
 	port     = "3306"
-	dbName   = "dbName"
+	dbName   = "scanner"
 )
 
-func initDB() {
+func InitDB() {
 	// [username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
 	// "username:password@tcp(host:port)/數據庫?charset=utf8"
 	path := strings.Join([]string{userName, ":", password, "@tcp(", host, ":", port, ")/", dbName, "?charset=utf8"}, "")

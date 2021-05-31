@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 
+	"control/pkg/db"
 	scannerPB "control/proto/scanner"
 
 	"google.golang.org/grpc"
@@ -30,7 +31,7 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 
 func main() {
 	//DB
-	db.initDB()
+	db.InitDB()
 	//gRPC Server
 	fmt.Println("starting gPRC seerver...")
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
