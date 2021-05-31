@@ -32,6 +32,7 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 func main() {
 	//DB
 	db.InitDB()
+	db.RegisterService("192.168.100.50", 80, "https")
 	//gRPC Server
 	fmt.Println("starting gPRC seerver...")
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")

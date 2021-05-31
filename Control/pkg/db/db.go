@@ -16,24 +16,37 @@ const (
 	dbName   = "scanner"
 )
 
-func InitDB() {
-	// [username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
-	// "username:password@tcp(host:port)/數據庫?charset=utf8"
-	path := strings.Join([]string{userName, ":", password, "@tcp(", host, ":", port, ")/", dbName, "?charset=utf8"}, "")
-	fmt.Println(path)
-	// 第一個是 driverName 第二個則是 database 的設定 path
-	// 也可以用 var DB *sql.DB
-	DB, _ := sql.Open("mysql", path)
-	// 設定 database 最大連接數
+var dbpath = strings.Join([]string{userName, ":", password, "@tcp(", host, ":", port, ")/", dbName, "?charset=utf8"}, "")
+
+var DB, _ = sql.Open("mysql", dbpath)
+
+func InitDB() error {
 	DB.SetConnMaxLifetime(100)
-
-	//設定上 database 最大閒置連接數
+	// 設定 database 最大連接數
 	DB.SetMaxIdleConns(10)
-
+	//設定上 database 最大閒置連接時間
 	// 驗證是否連上 db
-	if err := DB.Ping(); err != nil {
-		fmt.Println("opon database fail:", err)
-		return
+	err := DB.Ping()
+	if err != nil {
+		fmt.Println("open database fail:", err)
+		return err
+	} else {
+		fmt.Println("connnect success , ")
 	}
-	fmt.Println("connnect success")
+	return nil
+}
+func RegisterService(hostip string, port int, service string) error {
+	//stmt, err := DB.Prepare("INSERT INTO Service ('hostIP','port','service') VALUES (?, ?, ?)")
+	stmt, err := DB.Prepare("INSERT Service SET hostIP=?,port=?,service=?")
+	if err != nil {
+		fmt.Println("Prepare fail:", err)
+		return err
+	}
+	res, _ := stmt.Exec(hostip, port, service)
+	if err != nil {
+		fmt.Println("Exec fail:", err)
+		return err
+	}
+	fmt.Println("Sql.Result:", res)
+	return nil
 }
