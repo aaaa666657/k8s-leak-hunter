@@ -33,6 +33,13 @@ func main() {
 	//DB
 	db.InitDB()
 	db.RegisterService("192.168.100.50", 80, "https")
+	//datatype := []db.Service{}
+	datatype, _ := db.LoadService("192.168.100.50")
+	for i := 0; i < len(datatype); i++ {
+		fmt.Printf("port: %d", datatype[i].Port)
+		fmt.Println("service: ", datatype[i].Servicetype)
+	}
+
 	//gRPC Server
 	fmt.Println("starting gPRC seerver...")
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
