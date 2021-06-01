@@ -3,18 +3,17 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
-const (
-	userName = "root"
-	password = "scanner"
-	host     = "127.0.0.1"
-	port     = "3306"
-	dbName   = "scanner"
-)
+var userName, _ = os.LookupEnv("DBUSER")
+var password, _ = os.LookupEnv("DBPW")
+var host, _ = os.LookupEnv("DBIP")
+var port, _ = os.LookupEnv("DBPORT")
+var dbName = "scanner"
 
 var dbpath = strings.Join([]string{userName, ":", password, "@tcp(", host, ":", port, ")/", dbName, "?charset=utf8"}, "")
 var DB, _ = sql.Open("mysql", dbpath)
