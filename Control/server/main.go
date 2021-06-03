@@ -3,13 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-	"net"
 
 	"control/pkg/db"
 	scannerPB "control/proto/scanner"
-
-	"google.golang.org/grpc"
 )
 
 type Server struct{}
@@ -32,11 +28,13 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 func main() {
 	//DB
 	db.InitDB()
-	db.RegisterService("192.168.100.50", 80, "https")
+	db.RegisterService(0, 3307, "mysql")
+	db.RegisterHost(1, "kai.local", "127.0.0.1")
+	//err := db.RegisterHost("192.168.100.50")
 	//datatype := []db.Service{}
-	datatype, _ := db.LoadService("192.168.100.50")
+	/* datatype, _ := db.LoadService("192.168.100.50")
 	for i := 0; i < len(datatype); i++ {
-		fmt.Printf("port: %d", datatype[i].Port)
+		fmt.Printf("port: %d ", datatype[i].Port)
 		fmt.Println("service: ", datatype[i].Servicetype)
 	}
 
@@ -52,5 +50,5 @@ func main() {
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v \n", err)
-	}
+	} */
 }

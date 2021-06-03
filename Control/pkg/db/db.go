@@ -40,19 +40,58 @@ func InitDB() error {
 	}
 	return nil
 }
-func RegisterService(hostip string, port int, servicetype string) error {
+
+func RegisterHost(uid int, hostname string, ip string) error {
 	//stmt, err := DB.Prepare("INSERT INTO Service ('hostIP','port','service') VALUES (?, ?, ?)")
-	stmt, err := DB.Prepare("INSERT Service SET hostIP=?,port=?,service=?")
+
+	stmt, err := DB.Prepare("INSERT Host SET uid=?,hostname=?,ip=?")
 	if err != nil {
 		fmt.Println("Prepare fail:", err)
-		return err
 	}
-	res, _ := stmt.Exec(hostip, port, servicetype)
+	res, _ := stmt.Exec(uid, hostname, ip)
 	if err != nil {
 		fmt.Println("Exec fail:", err)
-		return err
 	}
-	fmt.Println("Sql.Result:", res)
+	_ = res
+	fmt.Printf("Insert Service uid : %d hostname : %s ip : %d Success ! \n", uid, hostname, ip)
+	return nil
+
+}
+
+func RegisterService(hostid int, port int, servicetype string) error {
+	/* //stmt, err := DB.Prepare("INSERT INTO Service ('hostIP','port','service') VALUES (?, ?, ?)")
+
+	err := DB.QueryRow("SELECT port FROM Service WHERE hostID IN (?)", hostid).Scan(&port)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+		}
+		stmt, err := DB.Prepare("INSERT Service SET hostID=?,port=?,service=?")
+		if err != nil {
+			fmt.Println("Prepare fail:", err)
+		}
+		res, _ := stmt.Exec(hostid, port, servicetype)
+		if err != nil {
+			fmt.Println("Exec fail:", err)
+		}
+		_ = res
+		fmt.Printf("RegisterService HostID: %d Port: %d Service: %s Success! \n", hostid, port, servicetype)
+		return nil
+	}
+	portexisted := errors.New("port exists in the database")
+	fmt.Print(portexisted)
+	return portexisted */
+
+	stmt, err := DB.Prepare("INSERT Service SET hostID=?,port=?,service=?")
+	if err != nil {
+		fmt.Println("Prepare fail:", err)
+	}
+	res, _ := stmt.Exec(hostid, port, servicetype)
+	if err != nil {
+		fmt.Println("Exec fail:", err)
+	}
+	_ = res
+	fmt.Printf("Insert Service HostID : %d Port : %d Service : %s Success ! \n", hostid, port, servicetype)
 	return nil
 }
 
