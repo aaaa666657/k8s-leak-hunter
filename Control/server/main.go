@@ -27,9 +27,15 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 
 func main() {
 	//DB
-	db.InitDB()
-	db.RegisterService(0, 3307, "mysql")
-	db.RegisterHost(1, "kai.local", "127.0.0.1")
+	//db.InitDB()
+	err := db.RegisterService(0, 3308, "mysql")
+	if err != nil {
+		fmt.Printf("failed to RegisterService: %v \n", err)
+	}
+	db.RegisterHost("test2.local", "192.168.100.53")
+	if err != nil {
+		fmt.Printf("failed to RegisterService: %v \n", err)
+	}
 	//err := db.RegisterHost("192.168.100.50")
 	//datatype := []db.Service{}
 	/* datatype, _ := db.LoadService("192.168.100.50")
