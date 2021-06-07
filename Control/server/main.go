@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"control/pkg/db"
+	"control/pkg/scanner"
 	scannerPB "control/proto/scanner"
 )
 
@@ -28,14 +29,30 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 func main() {
 	//DB
 	//db.InitDB()
-	err := db.RegisterService(0, 3308, "mysql")
+	err := db.RegisterService(8, 443, "https")
 	if err != nil {
 		fmt.Printf("failed to RegisterService: %v \n", err)
 	}
-	db.RegisterHost("test2.local", "192.168.100.53")
+	err = db.RegisterHost("nas.local", "192.168.100.209")
 	if err != nil {
-		fmt.Printf("failed to RegisterService: %v \n", err)
+		fmt.Printf("failed to RegisterHost: %v \n", err)
 	}
+
+	scannerTypeRes, scannerErrorRes := scanner.ScannerService(7)
+
+	for i := 0; i < len(scannerErrorRes.ErrorDiffService); i++ {
+		fmt.Printf("scaneer port: %d ", scannerErrorRes.ErrorDiffService[i].Port)
+		fmt.Println(" service: ", scannerErrorRes.ErrorDiffService[i].Servicetype)
+	}
+	fmt.Printf("------errorDiffService----------------------------------\n")
+
+	for i := 0; i < len(scannerErrorRes.ErrorPortWithoutExist); i++ {
+		fmt.Printf("scaneer port: %d ", scannerErrorRes.ErrorPortWithoutExist[i].Port)
+		fmt.Println(" service: ", scannerErrorRes.ErrorPortWithoutExist[i].Servicetype)
+	}
+	fmt.Printf("--------errorPortWithoutExist--------------------------------\n")
+
+	fmt.Printf("scanner Result : %d \n", scannerTypeRes)
 	//err := db.RegisterHost("192.168.100.50")
 	//datatype := []db.Service{}
 	/* datatype, _ := db.LoadService("192.168.100.50")

@@ -22,7 +22,7 @@ var DB, _ = sql.Open("mysql", dbpath)
 //DB
 
 type Service struct {
-	Port        int
+	Port        uint16
 	Servicetype string
 }
 
@@ -43,13 +43,11 @@ func InitDB() error {
 }
 
 func RegisterHost(hostname string, ip string) error {
-	//stmt, err := DB.Prepare("INSERT INTO Service ('hostIP','port','service') VALUES (?, ?, ?)")
-
+	//--------check ip exist
 	uidsql, _ := DB.Query("SELECT MAX(uid) FROM Host")
 	var uid int
 	for uidsql.Next() {
 		_ = uidsql.Scan(&uid)
-		fmt.Printf("MAX uid : %d \n", uid)
 	}
 	IPlist := make([]string, 0, 0)
 	rows, err := DB.Query("SELECT ip FROM Host")
@@ -67,7 +65,7 @@ func RegisterHost(hostname string, ip string) error {
 		ipexisted := errors.New("IP exists in the database")
 		return ipexisted
 	}
-
+	//----------insert
 	uid++
 
 	stmt, err := DB.Prepare("INSERT Host SET uid=?,hostname=?,ip=?")
@@ -85,7 +83,7 @@ func RegisterHost(hostname string, ip string) error {
 }
 
 func RegisterService(hostid int, port int, servicetype string) error {
-
+	//--------check port exist in the same id
 	portlist := make([]int, 0, 0)
 	rows, err := DB.Query("SELECT port FROM Service WHERE hostID IN(?);", hostid)
 	if err != nil {
@@ -102,7 +100,7 @@ func RegisterService(hostid int, port int, servicetype string) error {
 		portexisted := errors.New("port exists in the database")
 		return portexisted
 	}
-
+	//-----insert
 	stmt, err := DB.Prepare("INSERT Service SET hostID=?,port=?,service=?")
 	if err != nil {
 		fmt.Println("Prepare fail:", err)
@@ -116,22 +114,34 @@ func RegisterService(hostid int, port int, servicetype string) error {
 	return nil
 }
 
-func LoadService(hostip string) ([]Service, error) {
+func LoadService(hostid int) ([]Service, error) {
 	ServicesType := make([]Service, 0, 1)
 
-	rows, err := DB.Query("SELECT * FROM Service WHERE hostIP IN(?);", hostip)
+	rows, err := DB.Query("SELECT port,service FROM Service WHERE hostID=?;", hostid)
 	if err != nil {
 		fmt.Println("Query fail:", err)
 		return ServicesType, err
 	}
 	for rows.Next() {
-		var host string
-		var port int
+		var port uint16
 		var service string
-		err = rows.Scan(&host, &port, &service)
+		err = rows.Scan(&port, &service)
 		ServicesType = append(ServicesType, Service{port, service})
 	}
 	return ServicesType, nil
+}
+
+func LoadIP(hostid int) (string, error) {
+	ipsql, err := DB.Query("SELECT ip FROM Host WHERE uid=?", hostid)
+	if err != nil {
+		fmt.Println("find ip fail:", err)
+		return "", err
+	}
+	var ip string
+	for ipsql.Next() {
+		_ = ipsql.Scan(&ip)
+	}
+	return ip, nil
 }
 
 func findElementINT(s []int, num int) bool {
