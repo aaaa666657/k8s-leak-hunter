@@ -66,7 +66,7 @@ func scanner(hostid int) ([]db.Service, error) {
 	return ServicesType, nil
 }
 
-func ScannerService(hostid int) (int, ScannerRes) {
+func ScannerService(hostid int, triggertype string) (int, ScannerRes) {
 
 	var errorDiffService []errorSameService
 
@@ -98,6 +98,16 @@ func ScannerService(hostid int) (int, ScannerRes) {
 				i--
 			}
 		}
+	}
+	report_id := db.InsertLogID()
+
+	dt := time.Now()
+	for i := 0; i < len(errorDiffService); i++ {
+		db.InsertLog(report_id, "DiffService", triggertype, db.LoadHostname(hostid), int(errorDiffService[i].Port), errorDiffService[i].Servicetype[0], errorDiffService[i].Servicetype[1], dt.String())
+	}
+
+	for i := 0; i < len(res); i++ {
+		db.InsertLog(report_id, "PortWithoutExist", triggertype, db.LoadHostname(hostid), int(res[i].Port), "", res[i].Servicetype, dt.String())
 	}
 
 	result := ScannerRes{errorDiffService, res}

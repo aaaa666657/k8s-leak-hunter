@@ -25,11 +25,33 @@ type Service struct {
 	Port        uint16
 	Servicetype string
 }
+type Host struct {
+	Uid      int    `json:"Uid"`
+	Hostname string `json:"Hostname"`
+	Ip       string `json:"Ip"`
+}
+
+type DiffService struct {
+	TriggerType     string
+	Hostname        string
+	Port            int
+	ExpectedService string
+	ScannedService  string
+	ScannedAt       string
+}
+
+type PortWithoutExist struct {
+	TriggerType    string
+	Hostname       string
+	Port           int
+	ScannedService string
+	ScannedAt      string
+}
 
 func InitDB() error {
 	DB.SetConnMaxLifetime(100)
 	// 設定 database 最大連接數
-	DB.SetMaxIdleConns(10)
+	DB.SetMaxIdleConns(1000)
 	//設定上 database 最大閒置連接時間
 	// 驗證是否連上 db
 	err := DB.Ping()
@@ -42,7 +64,7 @@ func InitDB() error {
 	return nil
 }
 
-func RegisterHost(hostname string, ip string) error {
+func RegisterHost(hostname string, ip string) (int, error) {
 	//--------check ip exist
 	uidsql, _ := DB.Query("SELECT MAX(uid) FROM Host")
 	var uid int
@@ -53,7 +75,7 @@ func RegisterHost(hostname string, ip string) error {
 	rows, err := DB.Query("SELECT ip FROM Host")
 	if err != nil {
 		fmt.Println("Query fail:", err)
-		return err
+		return -1, err
 	}
 	for rows.Next() {
 		var ip string
@@ -63,7 +85,7 @@ func RegisterHost(hostname string, ip string) error {
 
 	if findElementSTRING(IPlist, ip) {
 		ipexisted := errors.New("IP exists in the database")
-		return ipexisted
+		return -1, ipexisted
 	}
 	//----------insert
 	uid++
@@ -78,7 +100,7 @@ func RegisterHost(hostname string, ip string) error {
 	}
 	_ = res
 	fmt.Printf("Insert Host uid : %d hostname : %s ip : %s Success ! \n", uid, hostname, ip)
-	return nil
+	return uid, nil
 
 }
 
@@ -142,6 +164,121 @@ func LoadIP(hostid int) (string, error) {
 		_ = ipsql.Scan(&ip)
 	}
 	return ip, nil
+}
+
+func LoadHostname(hostid int) string {
+	hostnamesql, err := DB.Query("SELECT hostname FROM Host WHERE uid=?", hostid)
+	if err != nil {
+		fmt.Println("find ip fail:", err)
+		return ""
+	}
+	var hostname string
+	for hostnamesql.Next() {
+		_ = hostnamesql.Scan(&hostname)
+	}
+	return hostname
+}
+
+func LoadHost() ([]Host, error) {
+	Hostlist := make([]Host, 0, 2)
+	hostsql, err := DB.Query("SELECT * FROM Host ")
+	if err != nil {
+		fmt.Println("find ip fail:", err)
+		return Hostlist, err
+	}
+	for hostsql.Next() {
+		var uid int
+		var hostname string
+		var ip string
+		err = hostsql.Scan(&uid, &hostname, &ip)
+		Hostlist = append(Hostlist, Host{uid, hostname, ip})
+	}
+	return Hostlist, nil
+}
+
+func InsertLogID() int {
+	uidsql, err := DB.Query("SELECT MAX(id) FROM ScannerLog")
+	var uid int
+	if err != nil {
+		fmt.Println("Prepare fail:", err)
+		return 0
+	} else {
+		for uidsql.Next() {
+			_ = uidsql.Scan(&uid)
+		}
+		uid++
+		fmt.Printf("uid : %d\n", uid)
+		return uid
+	}
+}
+
+func InsertLog(report_id int, reportType string, triggerType string, hostname string, port int, expected_service string, scanned_service string, scanned_at string) error {
+
+	//----------insert
+	stmt, err := DB.Prepare("INSERT ScannerLog SET id=?,report_type=?,trigger_type=?,hostname=?,port=?,expected_service=?,scanned_service=?,scanned_at=?")
+	if err != nil {
+		fmt.Println("Prepare fail:", err)
+	}
+	res, _ := stmt.Exec(report_id, reportType, triggerType, hostname, port, expected_service, scanned_service, scanned_at)
+	if err != nil {
+		fmt.Println("Exec fail:", err)
+	}
+	_ = res
+	return nil
+}
+
+func LoadLogMax() (int, error) {
+	idsql, err := DB.Query("SELECT MAX(id) FROM ScannerLog")
+	var id int
+	if err != nil {
+		fmt.Println("Prepare fail:", err)
+		return -1, err
+	} else {
+		for idsql.Next() {
+			_ = idsql.Scan(&id)
+		}
+		fmt.Printf("uid : %d\n", id)
+		return id, err
+	}
+}
+
+func LoadLogDiffService(uid int) ([]DiffService, error) {
+	diffServicelist := make([]DiffService, 0, 5)
+	diffServicesql, err := DB.Query("SELECT trigger_type,hostname,port,expected_service,scanned_service,scanned_at FROM ScannerLog WHERE id=? AND report_type=? ", uid, "DiffService")
+	if err != nil {
+		fmt.Println("Find diffService fail:", err)
+		return diffServicelist, err
+	}
+	for diffServicesql.Next() {
+		var trigger_type string
+		var hostname string
+		var port int
+		var expected_service string
+		var scanned_service string
+		var scanned_at string
+		err = diffServicesql.Scan(&trigger_type, &hostname, &port, &expected_service, &scanned_service, &scanned_at)
+		diffServicelist = append(diffServicelist, DiffService{trigger_type, hostname, port, expected_service, scanned_service, scanned_at})
+	}
+	return diffServicelist, nil
+}
+
+func LoadLogPortWithoutExist(uid int) ([]PortWithoutExist, error) {
+	port_without_existlist := make([]PortWithoutExist, 0, 4)
+	port_without_existsql, err := DB.Query("SELECT trigger_type,hostname,port,scanned_service,scanned_at FROM ScannerLog WHERE id=? AND report_type=? ", uid, "PortWithoutExist")
+	if err != nil {
+		fmt.Println("Find PortWithoutExist fail:", err)
+		return port_without_existlist, err
+	}
+	for port_without_existsql.Next() {
+		var trigger_type string
+		var hostname string
+		var port int
+		var scanned_service string
+		var scanned_at string
+		err = port_without_existsql.Scan(&trigger_type, &hostname, &port, &scanned_service, &scanned_at)
+		port_without_existlist = append(port_without_existlist, PortWithoutExist{trigger_type, hostname, port, scanned_service, scanned_at})
+	}
+	return port_without_existlist, nil
 }
 
 func findElementINT(s []int, num int) bool {

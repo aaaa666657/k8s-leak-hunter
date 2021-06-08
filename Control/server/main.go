@@ -2,11 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"strconv"
 
 	"control/pkg/db"
-	"control/pkg/scanner"
 	scannerPB "control/proto/scanner"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Server struct{}
@@ -27,51 +32,184 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 }
 
 func main() {
-	//DB
-	//db.InitDB()
-	err := db.RegisterService(8, 443, "https")
+	router := gin.Default()
+	router.GET("/RegisterService/:uid/:port/:service", rigister_service)
+	router.GET("/RegisterHost/:hostname/:ip", rigister_host)
+	router.GET("/Loadhost", load_host)
+	router.GET("/LoadService/:uid", load_service)
+	router.GET("/LoadLogConut", load_log_conut)
+	router.GET("/LoadLogDiffService/:uid", load_log_diffservice)
+	router.GET("/LoadLogPortWithoutExist/:uid", load_log_portwithoutexist)
+
+	router.Run(":8001")
+}
+
+func rigister_service(context *gin.Context) {
+
+	hostnamestr := context.Param("uid")
+	hostname, _ := strconv.Atoi(hostnamestr)
+	portstr := context.Param("port")
+	port, _ := strconv.Atoi(portstr)
+	servicestr := context.Param("service")
+	err := db.RegisterService(hostname, port, servicestr)
+	errstring := fmt.Sprint(err)
 	if err != nil {
-		fmt.Printf("failed to RegisterService: %v \n", err)
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": "",
+		})
 	}
-	err = db.RegisterHost("nas.local", "192.168.100.209")
+}
+
+func rigister_host(context *gin.Context) {
+
+	hostname := context.Param("hostname")
+	ip := context.Param("ip")
+	uid, err := db.RegisterHost(hostname, ip)
+
+	errstring := fmt.Sprint(err)
 	if err != nil {
-		fmt.Printf("failed to RegisterHost: %v \n", err)
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+
+		mes := fmt.Sprintf("The host ID is %d", uid)
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": mes,
+		})
 	}
 
-	scannerTypeRes, scannerErrorRes := scanner.ScannerService(7)
+}
 
-	for i := 0; i < len(scannerErrorRes.ErrorDiffService); i++ {
-		fmt.Printf("scaneer port: %d ", scannerErrorRes.ErrorDiffService[i].Port)
-		fmt.Println(" service: ", scannerErrorRes.ErrorDiffService[i].Servicetype)
-	}
-	fmt.Printf("------errorDiffService----------------------------------\n")
+func load_host(context *gin.Context) {
 
-	for i := 0; i < len(scannerErrorRes.ErrorPortWithoutExist); i++ {
-		fmt.Printf("scaneer port: %d ", scannerErrorRes.ErrorPortWithoutExist[i].Port)
-		fmt.Println(" service: ", scannerErrorRes.ErrorPortWithoutExist[i].Servicetype)
-	}
-	fmt.Printf("--------errorPortWithoutExist--------------------------------\n")
-
-	fmt.Printf("scanner Result : %d \n", scannerTypeRes)
-	//err := db.RegisterHost("192.168.100.50")
-	//datatype := []db.Service{}
-	/* datatype, _ := db.LoadService("192.168.100.50")
-	for i := 0; i < len(datatype); i++ {
-		fmt.Printf("port: %d ", datatype[i].Port)
-		fmt.Println("service: ", datatype[i].Servicetype)
-	}
-
-	//gRPC Server
-	fmt.Println("starting gPRC seerver...")
-	lis, err := net.Listen("tcp", "0.0.0.0:50051")
+	hostlist, err := db.LoadHost()
 	if err != nil {
-		log.Fatal("failed to listen: %v \n", err)
+		fmt.Printf("err : %v \n", err)
 	}
+	for i := 0; i < len(hostlist); i++ {
+		fmt.Printf("uid : %d hostname : %s ip : %s \n\n", hostlist[i].Uid, hostlist[i].Hostname, hostlist[i].Ip)
+	}
+	jsonData, _ := json.Marshal(hostlist)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(string(jsonData))
+	errstring := fmt.Sprintf("%v", err)
 
-	grpcServer := grpc.NewServer()
-	scannerPB.RegisterResourceRegisterServiceServer(grpcServer, &Server{})
+	if err != nil {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": "",
+			"json":    jsonData,
+		})
+	}
+}
 
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v \n", err)
-	} */
+func load_service(context *gin.Context) {
+
+	uidstr := context.Param("uid")
+	uid, _ := strconv.Atoi(uidstr)
+	servicelist, err := db.LoadService(uid)
+	if err != nil {
+		fmt.Printf("err : %v \n", err)
+	}
+	for i := 0; i < len(servicelist); i++ {
+		fmt.Printf("uid : %d port : %d service : %s \n\n", uid, servicelist[i].Port, servicelist[i].Servicetype)
+	}
+	jsonData, _ := json.Marshal(servicelist)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(string(jsonData))
+	errstring := fmt.Sprintf("%v", err)
+
+	if err != nil {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": "",
+			"json":    jsonData,
+		})
+	}
+}
+func load_log_conut(context *gin.Context) {
+	log_count, err := db.LoadLogMax()
+
+	errstring := fmt.Sprintf("%v", err)
+	if err != nil {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": strconv.Itoa(log_count),
+		})
+	}
+}
+func load_log_diffservice(context *gin.Context) {
+	uidstr := context.Param("uid")
+	uid, _ := strconv.Atoi(uidstr)
+	diff_service_list, err := db.LoadLogDiffService(uid)
+
+	jsonData, _ := json.Marshal(diff_service_list)
+
+	fmt.Println(string(jsonData))
+	errstring := fmt.Sprintf("%v", err)
+
+	if err != nil {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": "",
+			"json":    jsonData,
+		})
+	}
+}
+
+func load_log_portwithoutexist(context *gin.Context) {
+	uidstr := context.Param("uid")
+	uid, _ := strconv.Atoi(uidstr)
+	port_without_exist_list, err := db.LoadLogPortWithoutExist(uid)
+
+	jsonData, _ := json.Marshal(port_without_exist_list)
+
+	fmt.Println(string(jsonData))
+	errstring := fmt.Sprintf("%v", err)
+
+	if err != nil {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": "",
+			"json":    jsonData,
+		})
+	}
 }
