@@ -33,10 +33,12 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 
 func main() {
 	router := gin.Default()
-	router.GET("/RegisterService/:uid/:port/:service", rigister_service)
-	router.GET("/RegisterHost/:hostname/:ip", rigister_host)
+	router.Use(Cors())
+
+	router.GET("/RegisterService/:uid/:port/:service", register_service)
+	router.GET("/RegisterHost/:hostname/:ip", register_host)
 	router.GET("/Loadhost", load_host)
-	router.GET("/LoadService/:uid", load_service)
+	router.GET("/Loadservice", load_service)
 	router.GET("/LoadLogConut", load_log_conut)
 	router.GET("/LoadLogDiffService/:uid", load_log_diffservice)
 	router.GET("/LoadLogPortWithoutExist/:uid", load_log_portwithoutexist)
@@ -44,7 +46,41 @@ func main() {
 	router.Run(":8001")
 }
 
-func rigister_service(context *gin.Context) {
+func Cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		method := c.Request.Method
+		origin := c.Request.Header.Get("Origin") //請求頭部
+		if origin != "" {
+			//接收客戶端傳送的origin （重要！）
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			//伺服器支援的所有跨域請求的方法
+			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE,UPDATE")
+			//允許跨域設定可以返回其他子段，可以自定義欄位
+			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Length, X-CSRF-Token, Token,session, content-type")
+			// 允許瀏覽器（客戶端）可以解析的頭部 （重要）
+			c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers")
+			//設定快取時間
+			c.Header("Access-Control-Max-Age", "172800")
+			//允許客戶端傳遞校驗資訊比如 cookie (重要)
+			c.Header("Access-Control-Allow-Credentials", "true")
+		}
+
+		//允許型別校驗
+		if method == "OPTIONS" {
+			c.JSON(http.StatusOK, "ok!")
+		}
+
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("Panic info is: %v", err)
+			}
+		}()
+
+		c.Next()
+	}
+}
+
+func register_service(context *gin.Context) {
 
 	hostnamestr := context.Param("uid")
 	hostname, _ := strconv.Atoi(hostnamestr)
@@ -61,12 +97,12 @@ func rigister_service(context *gin.Context) {
 	} else {
 		context.JSON(http.StatusOK, gin.H{
 			"status":  "Sussess",
-			"message": "",
+			"message": "Sussess",
 		})
 	}
 }
 
-func rigister_host(context *gin.Context) {
+func register_host(context *gin.Context) {
 
 	hostname := context.Param("hostname")
 	ip := context.Param("ip")
@@ -90,7 +126,6 @@ func rigister_host(context *gin.Context) {
 }
 
 func load_host(context *gin.Context) {
-
 	hostlist, err := db.LoadHost()
 	if err != nil {
 		fmt.Printf("err : %v \n", err)
@@ -119,18 +154,39 @@ func load_host(context *gin.Context) {
 	}
 }
 
-func load_service(context *gin.Context) {
+/* func load_service(context *gin.Context) {
 
-	uidstr := context.Param("uid")
-	uid, _ := strconv.Atoi(uidstr)
-	servicelist, err := db.LoadService(uid)
+	servicelist, err := db.LoadServiceAll()
 	if err != nil {
 		fmt.Printf("err : %v \n", err)
 	}
-	for i := 0; i < len(servicelist); i++ {
-		fmt.Printf("uid : %d port : %d service : %s \n\n", uid, servicelist[i].Port, servicelist[i].Servicetype)
-	}
 	jsonData, _ := json.Marshal(servicelist)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(string(jsonData))
+	errstring := fmt.Sprintf("%v", err)
+
+	if err != nil {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": "",
+			"json":    jsonData,
+		})
+	}
+} */
+
+func load_service(context *gin.Context) {
+	hostlist, err := db.LoadServiceAll()
+	if err != nil {
+		fmt.Printf("err : %v \n", err)
+	}
+	jsonData, _ := json.Marshal(hostlist)
 	if err != nil {
 		log.Println(err)
 	}

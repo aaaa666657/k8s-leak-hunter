@@ -9,6 +9,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
+	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/syhlion/sqlwrapper v0.0.0-20180809095110-10e44a05844b // indirect
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect

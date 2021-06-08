@@ -48,6 +48,12 @@ type PortWithoutExist struct {
 	ScannedAt      string
 }
 
+type Service_list struct {
+	Uid         int
+	Port        uint16
+	Servicetype string
+}
+
 func InitDB() error {
 	DB.SetConnMaxLifetime(100)
 	// 設定 database 最大連接數
@@ -151,6 +157,24 @@ func LoadService(hostid int) ([]Service, error) {
 		ServicesType = append(ServicesType, Service{port, service})
 	}
 	return ServicesType, nil
+}
+
+func LoadServiceAll() ([]Service_list, error) {
+	Serviceslist := make([]Service_list, 0, 2)
+
+	rows, err := DB.Query("SELECT * FROM Service")
+	if err != nil {
+		fmt.Println("Query fail:", err)
+		return Serviceslist, err
+	}
+	for rows.Next() {
+		var uid int
+		var port uint16
+		var service string
+		err = rows.Scan(&uid, &port, &service)
+		Serviceslist = append(Serviceslist, Service_list{uid, port, service})
+	}
+	return Serviceslist, nil
 }
 
 func LoadIP(hostid int) (string, error) {
