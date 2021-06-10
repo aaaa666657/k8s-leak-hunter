@@ -66,7 +66,7 @@ func scanner(hostid int) ([]db.Service, error) {
 	return ServicesType, nil
 }
 
-func ScannerService(hostid int, triggertype string) (int, ScannerRes) {
+func ScannerService(hostid int, report_id int, triggertype string, timestemp string) (int, ScannerRes) {
 
 	var errorDiffService []errorSameService
 
@@ -76,13 +76,12 @@ func ScannerService(hostid int, triggertype string) (int, ScannerRes) {
 
 	res := difference(rigisterService, scannerService)
 
-	originalnum := len(res)
+	var originals = len(res)
 
 	for i := 0; i < len(res); i++ {
 		fmt.Printf("scaneer port: %d ", res[i].Port)
 		fmt.Println(" service: ", res[i].Servicetype)
 	}
-	fmt.Printf("--------res--------------------------------\n")
 
 	for i := 0; i < len(res); i++ {
 		nowPort := res[i].Port
@@ -99,21 +98,25 @@ func ScannerService(hostid int, triggertype string) (int, ScannerRes) {
 			}
 		}
 	}
-	report_id := db.InsertLogID()
 
-	dt := time.Now()
-	for i := 0; i < len(errorDiffService); i++ {
-		db.InsertLog(report_id, "DiffService", triggertype, db.LoadHostname(hostid), int(errorDiffService[i].Port), errorDiffService[i].Servicetype[0], errorDiffService[i].Servicetype[1], dt.String())
-	}
-
-	for i := 0; i < len(res); i++ {
-		db.InsertLog(report_id, "PortWithoutExist", triggertype, db.LoadHostname(hostid), int(res[i].Port), "", res[i].Servicetype, dt.String())
-	}
-
+	fmt.Printf("--------res--------------------------------\n")
 	result := ScannerRes{errorDiffService, res}
-	if originalnum != len(res) {
+	if originals != len(res) {
+		fmt.Printf("########################ERR########################\n")
+		for i := 0; i < len(errorDiffService); i++ {
+			db.InsertLog(report_id, "DiffService", triggertype, db.LoadHostname(hostid), int(errorDiffService[i].Port), errorDiffService[i].Servicetype[0], errorDiffService[i].Servicetype[1], timestemp)
+			fmt.Printf("report_id : %d type : DiffService triggertype : %s  Hostname : %s port : %d Expected_Service : %s Scanned_service : %s time : %s", report_id, triggertype, db.LoadHostname(hostid), int(errorDiffService[i].Port), errorDiffService[i].Servicetype[0], errorDiffService[i].Servicetype[1], timestemp)
+		}
+
+		for i := 0; i < len(res); i++ {
+			db.InsertLog(report_id, "PortWithoutExist", triggertype, db.LoadHostname(hostid), int(res[i].Port), "", res[i].Servicetype, timestemp)
+			fmt.Printf("report_id : %d type : PortWithoutExist triggertype : %s Hostname : %s port : %d Scanned_service : %s time : %s", report_id, triggertype, db.LoadHostname(hostid), int(res[i].Port), res[i].Servicetype, timestemp)
+		}
 		return 1, result
 	} else {
+		fmt.Printf("########################PASS########################\n")
+		db.InsertLog(report_id, "PASS", triggertype, db.LoadHostname(hostid), 0, "", "", timestemp)
+
 		return 0, result
 	}
 }

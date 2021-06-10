@@ -243,7 +243,13 @@ func InsertLog(report_id int, reportType string, triggerType string, hostname st
 	if err != nil {
 		fmt.Println("Prepare fail:", err)
 	}
-	res, _ := stmt.Exec(report_id, reportType, triggerType, hostname, port, expected_service, scanned_service, scanned_at)
+	var res sql.Result
+	if reportType == "PASS" {
+		fmt.Printf("reportType : %s\n", reportType)
+		res, _ = stmt.Exec(report_id, reportType, triggerType, hostname, nil, nil, nil, scanned_at)
+	} else {
+		res, _ = stmt.Exec(report_id, reportType, triggerType, hostname, port, expected_service, scanned_service, scanned_at)
+	}
 	if err != nil {
 		fmt.Println("Exec fail:", err)
 	}
@@ -303,6 +309,15 @@ func LoadLogPortWithoutExist(uid int) ([]PortWithoutExist, error) {
 		port_without_existlist = append(port_without_existlist, PortWithoutExist{trigger_type, hostname, port, scanned_service, scanned_at})
 	}
 	return port_without_existlist, nil
+}
+
+func Load_host_count() int {
+	uidsql, _ := DB.Query("SELECT MAX(uid) FROM Host")
+	var uid int
+	for uidsql.Next() {
+		_ = uidsql.Scan(&uid)
+	}
+	return uid
 }
 
 func findElementINT(s []int, num int) bool {

@@ -6,9 +6,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"control/pkg/db"
+	"control/pkg/event"
+	"control/pkg/scanner"
 	scannerPB "control/proto/scanner"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +38,9 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 }
 
 func main() {
+	event.SendNotify("Service Start")
+	exitService()
+	//scanner_all_host()
 	router := gin.Default()
 	router.Use(Cors())
 
@@ -42,6 +51,7 @@ func main() {
 	router.GET("/LoadLogConut", load_log_conut)
 	router.GET("/LoadLogDiffService/:uid", load_log_diffservice)
 	router.GET("/LoadLogPortWithoutExist/:uid", load_log_portwithoutexist)
+	router.GET("/ScannerService", scannerNow)
 
 	router.Run(":8001")
 }
@@ -268,4 +278,44 @@ func load_log_portwithoutexist(context *gin.Context) {
 			"json":    jsonData,
 		})
 	}
+}
+
+func scannerNow(context *gin.Context) {
+	go scanner_all_host()
+	context.JSON(http.StatusOK, gin.H{
+		"status":  "Sussess",
+		"message": "",
+	})
+}
+
+func scanner_all_host() {
+	now := time.Now()
+	logMax := db.InsertLogID()
+	errortimes := 0
+	id := strconv.Itoa(logMax)
+	fmt.Printf("%s\n", id)
+	for i := 0; i < db.Load_host_count(); i++ {
+		fmt.Printf("scanner host %d***********************************************\n", i)
+		res, _ := scanner.ScannerService(i, logMax, "Manual", now.String())
+		errortimes = errortimes + res
+	}
+	if errortimes == 0 {
+		senddata := "Test in " + id + " have some error, Please visit http://google.com to check."
+		fmt.Printf("%s\n", senddata)
+		event.SendNotify(senddata)
+	} else {
+		senddata := "Test in " + id + "is PASS "
+		fmt.Printf("%s\n", senddata)
+		event.SendNotify(senddata)
+	}
+}
+
+func exitService() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		event.SendNotify("Stop Service")
+		os.Exit(0)
+	}()
 }
