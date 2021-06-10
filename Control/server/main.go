@@ -17,6 +17,8 @@ import (
 	"control/pkg/scanner"
 	scannerPB "control/proto/scanner"
 
+	"github.com/robfig/cron/v3"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -40,6 +42,7 @@ func (*Server) Register(ctx context.Context, req *scannerPB.ResourceRegister) (*
 func main() {
 	event.SendNotify("Service Start")
 	exitService()
+	auto_scanner()
 	//scanner_all_host()
 	router := gin.Default()
 	router.Use(Cors())
@@ -52,6 +55,7 @@ func main() {
 	router.GET("/LoadLogDiffService/:uid", load_log_diffservice)
 	router.GET("/LoadLogPortWithoutExist/:uid", load_log_portwithoutexist)
 	router.GET("/ScannerService", scannerNow)
+	router.GET("/LoadLog", load_log_index)
 
 	router.Run(":8001")
 }
@@ -280,34 +284,73 @@ func load_log_portwithoutexist(context *gin.Context) {
 	}
 }
 
+func load_log_index(context *gin.Context) {
+	load_log_index_list, err := db.LoadLogIndex()
+	jsonData, _ := json.Marshal(load_log_index_list)
+	fmt.Println(string(jsonData))
+	errstring := fmt.Sprintf("%v", err)
+
+	if err != nil {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Error",
+			"message": errstring,
+		})
+	} else {
+		context.JSON(http.StatusOK, gin.H{
+			"status":  "Sussess",
+			"message": "",
+			"json":    jsonData,
+		})
+	}
+}
+
 func scannerNow(context *gin.Context) {
-	go scanner_all_host()
+	go scanner_all_host("Manual")
 	context.JSON(http.StatusOK, gin.H{
 		"status":  "Sussess",
-		"message": "",
+		"message": "Start the scanner, please wait a moment to reload the page",
 	})
 }
 
-func scanner_all_host() {
+func scanner_all_host(triggerType string) {
 	now := time.Now()
 	logMax := db.InsertLogID()
 	errortimes := 0
 	id := strconv.Itoa(logMax)
+
+	senddata := "Test in " + id + " Start the scanner, please wait a moment"
+	db.InsertLogIndex(logMax, triggerType, "ERROR")
+	fmt.Printf("%s\n", senddata)
+	event.SendNotify(senddata)
+
 	fmt.Printf("%s\n", id)
-	for i := 0; i < db.Load_host_count(); i++ {
+	for i := 0; i < db.Load_host_count()+1; i++ {
 		fmt.Printf("scanner host %d***********************************************\n", i)
-		res, _ := scanner.ScannerService(i, logMax, "Manual", now.String())
+		res, _ := scanner.ScannerService(i, logMax, triggerType, now.String())
 		errortimes = errortimes + res
 	}
 	if errortimes == 0 {
-		senddata := "Test in " + id + " have some error, Please visit http://google.com to check."
+		senddata := "Test in " + id + "is PASS "
+		db.InsertLogIndex(logMax, triggerType, "PASS")
 		fmt.Printf("%s\n", senddata)
 		event.SendNotify(senddata)
 	} else {
-		senddata := "Test in " + id + "is PASS "
+		senddata := "Test in " + id + " have some error, Please visit http://192.168.100.201:8002/#/scanner to check."
+		db.InsertLogIndex(logMax, triggerType, "ERROR")
 		fmt.Printf("%s\n", senddata)
 		event.SendNotify(senddata)
 	}
+}
+
+func auto_scanner() {
+	c := cron.New()
+
+	c.AddFunc("@every 10m", func() {
+		go scanner_all_host("AUTO")
+	})
+
+	c.Start()
+	fmt.Printf("Start Auto")
 }
 
 func exitService() {

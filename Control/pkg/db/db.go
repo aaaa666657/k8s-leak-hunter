@@ -54,6 +54,12 @@ type Service_list struct {
 	Servicetype string
 }
 
+type LogIndex struct {
+	Id          int
+	TriggerType string
+	Status      string
+}
+
 func InitDB() error {
 	DB.SetConnMaxLifetime(100)
 	// 設定 database 最大連接數
@@ -257,6 +263,22 @@ func InsertLog(report_id int, reportType string, triggerType string, hostname st
 	return nil
 }
 
+func InsertLogIndex(report_id int, triggerType string, status string) error {
+
+	//----------insert
+	stmt, err := DB.Prepare("INSERT LogIndex SET id=?,TriggerType=?,status=?")
+	if err != nil {
+		fmt.Println("Prepare fail:", err)
+	}
+	var res sql.Result
+	res, _ = stmt.Exec(report_id, triggerType, status)
+	if err != nil {
+		fmt.Println("Exec fail:", err)
+	}
+	_ = res
+	return nil
+}
+
 func LoadLogMax() (int, error) {
 	idsql, err := DB.Query("SELECT MAX(id) FROM ScannerLog")
 	var id int
@@ -290,6 +312,23 @@ func LoadLogDiffService(uid int) ([]DiffService, error) {
 		diffServicelist = append(diffServicelist, DiffService{trigger_type, hostname, port, expected_service, scanned_service, scanned_at})
 	}
 	return diffServicelist, nil
+}
+
+func LoadLogIndex() ([]LogIndex, error) {
+	logIndexlist := make([]LogIndex, 0, 2)
+	logIndexsql, err := DB.Query("SELECT * FROM LogIndex")
+	if err != nil {
+		fmt.Println("Find logIndex fail:", err)
+		return logIndexlist, err
+	}
+	for logIndexsql.Next() {
+		var id int
+		var triggerType string
+		var status string
+		err = logIndexsql.Scan(&id, &triggerType, &status)
+		logIndexlist = append(logIndexlist, LogIndex{id, triggerType, status})
+	}
+	return logIndexlist, nil
 }
 
 func LoadLogPortWithoutExist(uid int) ([]PortWithoutExist, error) {
