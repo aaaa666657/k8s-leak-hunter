@@ -77,7 +77,9 @@ func ScannerService(hostid int, report_id int, triggertype string, timestemp str
 	res := difference(rigisterService, scannerService)
 
 	var originals = len(res)
+	fmt.Printf("%v\n", res)
 
+	fmt.Printf("%d\n", originals)
 	for i := 0; i < len(res); i++ {
 		fmt.Printf("scaneer port: %d ", res[i].Port)
 		fmt.Println(" service: ", res[i].Servicetype)
@@ -101,7 +103,7 @@ func ScannerService(hostid int, report_id int, triggertype string, timestemp str
 
 	fmt.Printf("--------res--------------------------------\n")
 	result := ScannerRes{errorDiffService, res}
-	if originals != len(res) {
+	if originals != 0 {
 		fmt.Printf("########################ERR########################\n")
 		for i := 0; i < len(errorDiffService); i++ {
 			db.InsertLog(report_id, "DiffService", triggertype, db.LoadHostname(hostid), int(errorDiffService[i].Port), errorDiffService[i].Servicetype[0], errorDiffService[i].Servicetype[1], timestemp)

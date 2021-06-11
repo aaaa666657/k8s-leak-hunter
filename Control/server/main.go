@@ -319,18 +319,17 @@ func scanner_all_host(triggerType string) {
 	id := strconv.Itoa(logMax)
 
 	senddata := "Test in " + id + " Start the scanner, please wait a moment"
-	db.InsertLogIndex(logMax, triggerType, "ERROR")
 	fmt.Printf("%s\n", senddata)
 	event.SendNotify(senddata)
 
 	fmt.Printf("%s\n", id)
-	for i := 0; i < db.Load_host_count()+1; i++ {
+	for i := 1; i < db.Load_host_count()+1; i++ {
 		fmt.Printf("scanner host %d***********************************************\n", i)
 		res, _ := scanner.ScannerService(i, logMax, triggerType, now.String())
 		errortimes = errortimes + res
 	}
 	if errortimes == 0 {
-		senddata := "Test in " + id + "is PASS "
+		senddata := "Test in " + id + " is PASS "
 		db.InsertLogIndex(logMax, triggerType, "PASS")
 		fmt.Printf("%s\n", senddata)
 		event.SendNotify(senddata)
@@ -345,7 +344,7 @@ func scanner_all_host(triggerType string) {
 func auto_scanner() {
 	c := cron.New()
 
-	c.AddFunc("@every 10m", func() {
+	c.AddFunc("@every 1m", func() {
 		go scanner_all_host("AUTO")
 	})
 
