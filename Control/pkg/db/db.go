@@ -49,7 +49,7 @@ type PortWithoutExist struct {
 }
 
 type Service_list struct {
-	Uid         int
+	Hostname    string
 	Port        uint16
 	Servicetype string
 }
@@ -178,7 +178,7 @@ func LoadServiceAll() ([]Service_list, error) {
 		var port uint16
 		var service string
 		err = rows.Scan(&uid, &port, &service)
-		Serviceslist = append(Serviceslist, Service_list{uid, port, service})
+		Serviceslist = append(Serviceslist, Service_list{LoadHostname(uid), port, service})
 	}
 	return Serviceslist, nil
 }
@@ -207,6 +207,21 @@ func LoadHostname(hostid int) string {
 		_ = hostnamesql.Scan(&hostname)
 	}
 	return hostname
+}
+
+func LoadHostnameID(hostname string) int {
+	hostnamesql, err := DB.Query("SELECT uid FROM Host WHERE hostname=?", hostname)
+	if err != nil {
+		fmt.Println("find ip fail:", err)
+		return -1
+	}
+	var id int
+	for hostnamesql.Next() {
+		_ = hostnamesql.Scan(&id)
+	}
+
+	fmt.Printf("Hostname: %s ID : %d\n\n", hostname, id)
+	return id
 }
 
 func LoadHost() ([]Host, error) {

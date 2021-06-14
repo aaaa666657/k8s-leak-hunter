@@ -47,7 +47,7 @@ func main() {
 	router := gin.Default()
 	router.Use(Cors())
 
-	router.GET("/RegisterService/:uid/:port/:service", register_service)
+	router.GET("/RegisterService/:hostname/:port/:service", register_service)
 	router.GET("/RegisterHost/:hostname/:ip", register_host)
 	router.GET("/Loadhost", load_host)
 	router.GET("/Loadservice", load_service)
@@ -96,12 +96,12 @@ func Cors() gin.HandlerFunc {
 
 func register_service(context *gin.Context) {
 
-	hostnamestr := context.Param("uid")
-	hostname, _ := strconv.Atoi(hostnamestr)
+	hostnamestr := context.Param("hostname")
+	fmt.Printf("hostname : %s \n\n", hostnamestr)
 	portstr := context.Param("port")
 	port, _ := strconv.Atoi(portstr)
 	servicestr := context.Param("service")
-	err := db.RegisterService(hostname, port, servicestr)
+	err := db.RegisterService(db.LoadHostnameID(hostnamestr), port, servicestr)
 	errstring := fmt.Sprint(err)
 	if err != nil {
 		context.JSON(http.StatusOK, gin.H{
@@ -344,7 +344,7 @@ func scanner_all_host(triggerType string) {
 func auto_scanner() {
 	c := cron.New()
 
-	c.AddFunc("@every 1m", func() {
+	c.AddFunc("@every 10m", func() {
 		go scanner_all_host("AUTO")
 	})
 
