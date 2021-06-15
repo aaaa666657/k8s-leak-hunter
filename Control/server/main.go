@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"errors"
 
 	"control/pkg/db"
 	"control/pkg/event"
@@ -101,7 +102,13 @@ func register_service(context *gin.Context) {
 	portstr := context.Param("port")
 	port, _ := strconv.Atoi(portstr)
 	servicestr := context.Param("service")
-	err := db.RegisterService(db.LoadHostnameID(hostnamestr), port, servicestr)
+	id :=db.LoadHostnameID(hostnamestr)
+	var err error
+	if id != 0 {
+		err = db.RegisterService(id, port, servicestr)
+	}else{
+		err = errors.New(hostnamestr +" does not exist in the database")
+	}
 	errstring := fmt.Sprint(err)
 	if err != nil {
 		context.JSON(http.StatusOK, gin.H{
